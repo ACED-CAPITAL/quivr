@@ -1,5 +1,7 @@
 import { UUID } from "crypto";
 
+import { Source } from "@/lib/types/MessageMetadata";
+
 export type ChatQuestion = {
   model?: string;
   question?: string;
@@ -16,6 +18,12 @@ export type ChatMessage = {
   message_time: string;
   prompt_title?: string;
   brain_name?: string;
+  brain_id?: UUID;
+  metadata?: {
+    sources?: Source[];
+    thoughts?: string;
+  };
+  thumbs?: boolean;
 };
 
 type NotificationStatus = "Pending" | "Done";

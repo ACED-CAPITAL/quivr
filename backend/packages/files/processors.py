@@ -1,6 +1,7 @@
 from modules.brain.service.brain_service import BrainService
 
 from .parsers.audio import process_audio
+from .parsers.bibtex import process_bibtex
 from .parsers.code_python import process_python
 from .parsers.csv import process_csv
 from .parsers.docx import process_docx
@@ -30,6 +31,7 @@ file_processors = {
     ".mpeg": process_audio,
     ".pdf": process_pdf,
     ".html": process_html,
+    ".bib": process_bibtex,
     ".pptx": process_powerpoint,
     ".docx": process_docx,
     ".odt": process_odt,
@@ -49,16 +51,14 @@ brain_service = BrainService()
 
 
 # TODO: Move filter_file to a file service to avoid circular imports from models/files.py for File class
-async def filter_file(
+def filter_file(
     file,
     brain_id,
     original_file_name=None,
 ):
-    await file.compute_file_sha1()
-
     file_exists = file.file_already_exists()
     file_exists_in_brain = file.file_already_exists_in_brain(brain_id)
-    using_file_name = original_file_name or file.file.filename if file.file else ""
+    using_file_name = file.file_name
 
     brain = brain_service.get_brain_by_id(brain_id)
     if brain is None:
@@ -83,9 +83,10 @@ async def filter_file(
 
     if file.file_extension in file_processors:
         try:
-            result = await file_processors[file.file_extension](
+            result = file_processors[file.file_extension](
                 file=file,
                 brain_id=brain_id,
+                original_file_name=original_file_name,
             )
             if result is None or result == 0:
                 return create_response(
@@ -99,10 +100,7 @@ async def filter_file(
         except Exception as e:
             # Add more specific exceptions as needed.
             print(f"Error processing file: {e}")
-            return create_response(
-                f"⚠️ An error occurred while processing {using_file_name}.",  # pyright: ignore reportPrivateUsage=none
-                "error",
-            )
+            raise e
 
     return create_response(
         f"❌ {using_file_name} is not supported.",  # pyright: ignore reportPrivateUsage=none
